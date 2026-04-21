@@ -1,14 +1,9 @@
-import { Capacitor } from "@capacitor/core";
-
-// On web the app and API share an origin (/api is proxied or co-located on
-// Cloudflare Pages). Inside Capacitor the web bundle is served from
-// capacitor://localhost, so fetches must go to the deployed Worker URL.
-// Set VITE_API_BASE at build time for native builds.
-const NATIVE_BASE = import.meta.env.VITE_API_BASE ?? "";
+// Set VITE_API_BASE at build time to point at the deployed Worker.
+// Required for Capacitor (capacitor://localhost can't resolve relative
+// paths) and for web builds where the frontend and Worker are on
+// different origins. Empty falls back to same-origin (dev proxy).
+const BASE = (import.meta.env.VITE_API_BASE ?? "").replace(/\/$/, "");
 
 export function apiUrl(path: string): string {
-  if (Capacitor.isNativePlatform() && NATIVE_BASE) {
-    return `${NATIVE_BASE.replace(/\/$/, "")}${path}`;
-  }
-  return path;
+  return BASE ? `${BASE}${path}` : path;
 }
