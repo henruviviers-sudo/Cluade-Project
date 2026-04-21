@@ -8,7 +8,65 @@ interface Props {
 
 export function PriceGrid({ snapshot }: Props) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-ink-line">
+    <>
+      <MobileCards snapshot={snapshot} />
+      <DesktopTable snapshot={snapshot} />
+    </>
+  );
+}
+
+function MobileCards({ snapshot }: Props) {
+  return (
+    <div className="grid gap-3 sm:hidden">
+      {TRACKED_PAIRS.map((pair) => {
+        const perExchange = snapshot.exchanges.map((ex) => {
+          const t = ex.tickers.find((x) => x.pair === pair);
+          return { exchange: ex.exchange, ok: ex.ok, last: t?.last ?? null };
+        });
+        const lasts = perExchange
+          .map((p) => p.last)
+          .filter((n): n is number => n !== null);
+        const spread = spreadPct(lasts);
+
+        return (
+          <div
+            key={pair}
+            className="rounded-xl border border-ink-line bg-ink-soft p-4"
+          >
+            <div className="flex items-baseline justify-between">
+              <span className="font-mono text-base">{pair}</span>
+              <span className="text-xs text-fog">
+                {spread === null ? "—" : `spread ${spread.toFixed(2)}%`}
+              </span>
+            </div>
+            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+              {perExchange.map((p) => (
+                <div
+                  key={p.exchange}
+                  className="flex items-baseline justify-between"
+                >
+                  <dt className="capitalize text-fog">
+                    {p.exchange}
+                    {!p.ok && (
+                      <span className="ml-1 text-[10px] text-red-400">
+                        offline
+                      </span>
+                    )}
+                  </dt>
+                  <dd className="font-mono tabular-nums">{zar(p.last)}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function DesktopTable({ snapshot }: Props) {
+  return (
+    <div className="hidden overflow-x-auto rounded-lg border border-ink-line sm:block">
       <table className="w-full text-sm">
         <thead className="bg-ink-soft text-fog">
           <tr>
@@ -37,24 +95,15 @@ export function PriceGrid({ snapshot }: Props) {
   );
 }
 
-function Row({
-  pair,
-  snapshot,
-}: {
-  pair: TrackedPair;
-  snapshot: Snapshot;
-}) {
-  const lasts: number[] = [];
+function Row({ pair, snapshot }: { pair: TrackedPair; snapshot: Snapshot }) {
   const cells = snapshot.exchanges.map((ex) => {
     const t = ex.tickers.find((x) => x.pair === pair);
-    if (t?.last != null) lasts.push(t.last);
     return { exchange: ex.exchange, last: t?.last ?? null };
   });
-
-  const spread =
-    lasts.length >= 2
-      ? ((Math.max(...lasts) - Math.min(...lasts)) / Math.min(...lasts)) * 100
-      : null;
+  const lasts = cells
+    .map((c) => c.last)
+    .filter((n): n is number => n !== null);
+  const spread = spreadPct(lasts);
 
   return (
     <tr className="border-t border-ink-line">
@@ -72,4 +121,11 @@ function Row({
       </td>
     </tr>
   );
+}
+
+function spreadPct(values: number[]): number | null {
+  if (values.length < 2) return null;
+  const lo = Math.min(...values);
+  const hi = Math.max(...values);
+  return ((hi - lo) / lo) * 100;
 }

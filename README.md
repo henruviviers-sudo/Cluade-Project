@@ -8,6 +8,8 @@ Weekend 1 skeleton from the blueprint — deployable to Cloudflare Pages + Worke
 - Vite + React 18 + TypeScript + Tailwind (frontend, built to `dist/`)
 - Cloudflare Worker (`src/worker/index.ts`) exposing `/api/snapshot`
 - No database, no auth, no user accounts. State lives in `localStorage` only.
+- Installable PWA: manifest + service worker (offline shell + last-snapshot cache).
+  Works on iOS (Safari → Share → Add to Home Screen) and Android (Chrome install prompt).
 
 ## Layout
 
