@@ -52,3 +52,55 @@ npm run deploy                    # worker
 
 Create a KV namespace and uncomment the `SNAPSHOT_CACHE` binding in `wrangler.toml`
 before deploying if you want server-side caching (saves exchange-side rate limit).
+
+## Native (iOS + Android via Capacitor)
+
+The same React bundle ships as a real app binary. Inside the native shell the
+web bundle is served from `capacitor://localhost`, so API calls need an
+absolute Worker URL — set it at build time:
+
+```
+# .env.production or your CI env
+VITE_API_BASE=https://api.yourdomain.com
+```
+
+### First-time setup
+
+One-off on each platform. Requires Xcode (iOS, macOS-only) and/or Android
+Studio + JDK 17:
+
+```
+npm install
+npx cap add ios
+npx cap add android
+```
+
+This generates the `ios/` and `android/` folders — commit them.
+
+### Build + open
+
+```
+npm run mobile:ios       # build web, sync, open Xcode
+npm run mobile:android   # build web, sync, open Android Studio
+```
+
+Or run on a connected device / simulator:
+
+```
+npm run mobile:run:ios
+npm run mobile:run:android
+```
+
+### Every time you change web code
+
+```
+npm run mobile:sync      # build + cap sync
+```
+
+### Signing + stores
+
+- iOS: open `ios/App/App.xcworkspace` in Xcode, set Team + bundle identifier
+  (matches `appId` in `capacitor.config.ts`: `za.co.sacryptotracker.app`),
+  archive → App Store Connect. Needs Apple Developer membership ($99/yr).
+- Android: `cd android && ./gradlew bundleRelease`, upload the `.aab` to
+  Play Console. Needs a Google Play Developer account ($25 one-time).

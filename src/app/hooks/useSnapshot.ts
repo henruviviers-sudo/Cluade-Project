@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Snapshot } from "../../shared/types";
+import { apiUrl } from "../lib/apiBase";
 
 type State =
   | { status: "loading"; snapshot: null; error: null }
@@ -22,7 +23,9 @@ export function useSnapshot(intervalMs: number = DEFAULT_INTERVAL_MS): State {
 
     async function load() {
       try {
-        const res = await fetch("/api/snapshot", { signal: controller.signal });
+        const res = await fetch(apiUrl("/api/snapshot"), {
+          signal: controller.signal,
+        });
         if (!res.ok) throw new Error(`snapshot ${res.status}`);
         const snap = (await res.json()) as Snapshot;
         if (cancelled) return;
