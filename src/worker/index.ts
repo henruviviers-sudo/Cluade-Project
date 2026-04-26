@@ -5,6 +5,7 @@ import { fetchValr } from "./adapters/valr";
 import { fetchAltCoinTrader } from "./adapters/altcointrader";
 
 interface Env {
+  ASSETS?: Fetcher;
   SNAPSHOT_CACHE?: KVNamespace;
 }
 
@@ -22,9 +23,33 @@ export default {
       return json({ ok: true, at: Date.now() });
     }
 
+    if (env.ASSETS) return env.ASSETS.fetch(request);
     return new Response("not found", { status: 404 });
   },
+
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(refreshSnapshot(env));
+  },
 };
+
+async function buildSnapshot(): Promise<Snapshot> {
+  const pairs = [...TRACKED_PAIRS];
+  const [luno, valr, act] = await Promise.all([
+    fetchLuno(pairs),
+    fetchValr(pairs),
+    fetchAltCoinTrader(pairs),
+  ]);
+  return { generatedAt: Date.now(), exchanges: [luno, valr, act] };
+}
+
+async function refreshSnapshot(env: Env): Promise<void> {
+  const snapshot = await buildSnapshot();
+  if (env.SNAPSHOT_CACHE) {
+    await env.SNAPSHOT_CACHE.put(CACHE_KEY, JSON.stringify(snapshot), {
+      expirationTtl: CACHE_TTL_SECONDS,
+    });
+  }
+}
 
 async function handleSnapshot(env: Env): Promise<Response> {
   if (env.SNAPSHOT_CACHE) {
@@ -32,18 +57,7 @@ async function handleSnapshot(env: Env): Promise<Response> {
     if (cached) return jsonRaw(cached, { "x-cache": "hit" });
   }
 
-  const pairs = [...TRACKED_PAIRS];
-  const [luno, valr, act] = await Promise.all([
-    fetchLuno(pairs),
-    fetchValr(pairs),
-    fetchAltCoinTrader(pairs),
-  ]);
-
-  const snapshot: Snapshot = {
-    generatedAt: Date.now(),
-    exchanges: [luno, valr, act],
-  };
-
+  const snapshot = await buildSnapshot();
   const body = JSON.stringify(snapshot);
   if (env.SNAPSHOT_CACHE) {
     await env.SNAPSHOT_CACHE.put(CACHE_KEY, body, {
