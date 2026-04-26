@@ -1,0 +1,29 @@
+name = "sa-crypto-tracker"
+main = "src/worker/index.ts"
+compatibility_date = "2025-01-01"
+
+# Serve the React build (dist/) at /, with the Worker handling /api/*.
+# `not_found_handling = "single-page-application"` makes any unmatched path
+# fall back to index.html — needed for client-side routing.
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+# Periodic warmup: pre-fetch the snapshot so users hit a primed KV cache
+# instead of waiting on three exchange round-trips. Matches the trigger
+# you configured in the dashboard.
+[triggers]
+crons = ["*/15 * * * *"]
+
+[dev]
+port = 8787
+
+[observability]
+enabled = true
+
+# Snapshot cache. Run `npx wrangler kv namespace create SNAPSHOT_CACHE`,
+# paste the printed id below, and uncomment to enable server-side caching.
+# [[kv_namespaces]]
+# binding = "SNAPSHOT_CACHE"
+# id = "replace-with-real-kv-id"
